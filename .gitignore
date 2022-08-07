@@ -1,7 +1,8 @@
 .DS_Store
 
-## Dependency
+## Dependency and references
 agoric-sdk
+faucet-demo
 
 ## Node stuff
 node_modules

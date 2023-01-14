@@ -10,6 +10,7 @@ import { AmountMath } from '@agoric/ertp';
  
 const privateArgsShape = harden({
 
+  namesByAddress: 'nameHub',
   storageNode: M.eref(M.remotable('storageNode')),
   marshaller: M.eref(M.remotable('marshaller')),
 });
@@ -88,34 +89,43 @@ const start = async (zcf, privateArgs) => {
   }
 
   /**
-   * The exposed function. Checks for various things and calls helper functions.
+   * Offer handler
    * 
-   * @param {*} asset 
-   * @param {*} destination 
-   * @returns 
+   * @param {*} seat 
    */
-  const swapAndSend = async (asset, destination) => {
+  const swapAndSend = async (seat, amount, destination) => {
 
+    const { give: { In: bought } } = seat.getProposal();
+    const asset = bought.getAllegedBrand();
+
+    // asset, destination
     // check destination indeed exists
     // check asset is of the correct type
-    const amount = asset.Value;
 
-    if(!brandToPSM.has(asset)) {
-      console.error(`No PSM instance for incoming asset: ${asset}`);
-      return false;
+    if(AmountMath.isEmpty(amount)) {
+      console.error(`Empty amount sent for the asset: ${asset}`);
+      seat.fail(Error(`Empty amount sent for the asset: ${asset}`));
     }
+    if(!brandToPSM.has(asset)) {
+      console.error(`No PSM mapping for the incomming Asset: ${asset}`);
+      seat.fail(Error(`No PSM mapping for the sent Asset: ${asset}`));
+    }
+
+
     const psmInstance = brandToPSM.get(asset);
     const paymentIn = undefined;
 
     const paymentOut = await getPayOut(paymentIn, amount, psmInstance);
     depositPayment(paymentOut, destination);
 
-    return true;
+    seat.exit();
   }
- 
+
   /* Create public and creator facets, and harden */
  
-  const publicFacet = Far('', { swapAndSend });
+  const publicFacet = Far('', { 
+    makeSwapAndSendInvitation: () => zcf.makeInvitation(swapAndSend, 'swapAndSend'),
+  });
 
   // tie with governance?
   const creatorFacet = Far('', {
@@ -124,7 +134,38 @@ const start = async (zcf, privateArgs) => {
   });
  
   // @ts-ignore
-  return harden({ creatorFacet, publicFacet });
+  // return harden({ creatorFacet, publicFacet });
+
+
+
+
+  // TODO: private args
+
+  // TODO: setup PSM
+
+  // TODO: invitationHandler
+
+  const sendHandler = async (seat, amount, destination) => {
+  }
+
+  const swapHandler = async (seat, amount, destination) => {
+  }
+
+  const invitationHandler = async (invitation, amount, destination) => {
+    await swapHandler();
+    await sendHandler();
+  }
+  
+  // TODO: makeInvitation
+
+  const makeSwapAndSendInvitation = async () => {
+    
+  }
+
+  // TODO: Facets
+
+  // TODO: return
+
 }
  
 // harden and export
